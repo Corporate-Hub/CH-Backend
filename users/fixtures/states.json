@@ -1,0 +1,10 @@
+[
+    {
+        "model": "users.state",
+        "pk": 1,
+        "fields": {
+            "name": "Goa",
+            "country": 1
+        }
+    }
+]
