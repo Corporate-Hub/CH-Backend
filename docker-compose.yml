@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+
+  # web:
+  #   container_name: CORE_backend
+  #   build: .
+  #   env_file: .env
+  #   command: python manage.py runserver 0.0.0.0:8000
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - .:/app
+  #   depends_on:
+  #     - db
+
+  db:
+    container_name: CH_BACKEND_DB
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file: .env
+
+volumes:
+  postgres_data:
