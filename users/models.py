@@ -3,6 +3,7 @@ from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin)
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from .utils import UserAccountManager
+from django.utils.text import slugify
 
 from django.db.models.fields import UUIDField
 from ulid import new as ulid_new
@@ -37,7 +38,7 @@ class BaseModel(models.Model):
 
 class Country(BaseModel):
 
-    internal_id = ULIDField(_('country_ulid'), editable = False)
+    internal_id = ULIDField(_('country ulid'), editable = False)
     name = models.CharField(_('country name'), max_length=255)
     isd_code = models.CharField(_('isd code'), max_length=50)
     alpha2 = models.CharField(_('alpha 2'), max_length=100)
@@ -91,9 +92,9 @@ class State(BaseModel):
 
 class PhoneNumber(BaseModel):
 
-    internal_id = ULIDField(_('phone_ulid'), editable = False)
-    isd_code = models.CharField(models.CharField(_('isd_code'), blank=True, help_text="isd_code"))
-    phone = models.CharField(models.CharField(_('phone_number'), blank=True, help_text="phone number"))
+    internal_id = ULIDField(_('phone ulid'), editable = False)
+    isd_code = models.CharField(_('isd code'), blank=True, help_text="isd_code")
+    phone = models.CharField(_('phone number'), blank=True, help_text="phone number")
     country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
 
     class Meta:
@@ -107,10 +108,10 @@ class PhoneNumber(BaseModel):
 
 class Address(BaseModel):
 
-    internal_id = ULIDField(_('address_id'), editable=False)
-    address_1 = models.CharField(_('address_1'), max_length=100)
-    address_2 = models.CharField(_('address_2'), max_length=100)
-    zip_code = models.CharField(_('zip_code'), max_length=50)
+    internal_id = ULIDField(_('address id'), editable=False)
+    address_1 = models.CharField(_('address 1'), max_length=100)
+    address_2 = models.CharField(_('address 2'), max_length=100)
+    zip_code = models.CharField(_('zip code'), max_length=50)
     city = models.CharField(_('city'), max_length=100)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
@@ -126,9 +127,9 @@ class Address(BaseModel):
 
 class Company(BaseModel):
 
-    internal_id = ULIDField(_('role_id'), editable=False)
-    name = models.CharField(_('company_name'), max_length=100)
-    branch = models.CharField(_('company_branch'), max_length=100)
+    internal_id = ULIDField(_('company id'), editable=False)
+    name = models.CharField(_('company name'), max_length=100)
+    branch = models.CharField(_('company branch'), max_length=100)
     company_address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True)
 
     class Meta:
@@ -144,9 +145,9 @@ class Company(BaseModel):
 
 class Role(BaseModel):
 
-    internal_id = ULIDField(_('role_id'), editable=False)
+    internal_id = ULIDField(_('role id'), editable=False)
     slug =  models.SlugField(_('slug'), max_length=100, unique=True, db_index=True)
-    name = models.CharField(_('role_name'), max_length=100)
+    name = models.CharField(_('role name'), max_length=100)
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True)
 
     class Meta:
@@ -168,20 +169,20 @@ class UserAccount(AbstractBaseUser, PermissionsMixin, BaseModel):
         ('female', 'Female'),
     ]
 
-    internal_id = ULIDField(_('user_id'), editable = False)
+    internal_id = ULIDField(_('user id'), editable = False)
     email = models.EmailField(_('email'), max_length=255, unique=True)
     secondary_email = models.EmailField(_('secondary email'),max_length=254, help_text="secondary email address")
     first_name = models.CharField(_('first name'),max_length=254, help_text="First Name of the User")
     last_name = models.CharField(_('last name'),max_length=254, help_text="Last Name of the User")
     gender = models.CharField(_('sex'),max_length=6, choices=GENDER_CHOICES)
     dob = models.DateTimeField(_('date of birth'), auto_now_add=True)
-    employee_code = models.CharField(_('employee_code'), max_length=50)
+    employee_code = models.CharField(_('employee code'), max_length=50)
     joining_date = models.DateTimeField(_('joining date'), auto_now=True)
     address = models.ForeignKey(Address ,on_delete=models.CASCADE, null=True)
     phone = models.ForeignKey(PhoneNumber ,on_delete=models.CASCADE, null=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True)
-    is_staff = models.BooleanField(_("is_staff"), default=False)
+    is_staff = models.BooleanField(_("is staff"), default=False)
     attendance = models.ForeignKey('workflow.Attendance', on_delete=models.CASCADE, null=True)
     leave_request = models.ForeignKey('workflow.LeaveRequest', on_delete=models.CASCADE, null=True)
     objects = UserAccountManager()
@@ -196,6 +197,11 @@ class UserAccount(AbstractBaseUser, PermissionsMixin, BaseModel):
     def __str__(self):
         return self.email
 
+    def save(self, *args, **kwargs):
+        if not self.employee_code:
+            self.employee_code = self.generate_employee_code()
+        super().save(*args, **kwargs)
+
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
@@ -204,10 +210,26 @@ class UserAccount(AbstractBaseUser, PermissionsMixin, BaseModel):
     def get_user(cls, **criteria):
         return cls.objects.filter(**criteria)
 
+    def generate_employee_code(self) -> str:
+        """
+        Generates an employee code for a user based on their company name and a unique identifier.
+
+        Returns:
+            str: The generated employee code for the user.
+        """
+        import uuid
+        if self.company:
+            prefix = slugify(self.company.name).upper()
+        else:
+            prefix = "EMP"
+        unique_id = str(uuid.uuid4().int)[:8]
+        employee_code = f"{prefix}-{unique_id}"
+        return employee_code
+
 
 class Invitation(BaseModel):
 
-    internal_id = ULIDField(_('invitation_id'), editable = False)
+    internal_id = ULIDField(_('invitation id'), editable = False)
     inviter_id = models.ForeignKey(UserAccount,  on_delete=models.CASCADE, related_name='invitations')
     first_name = models.CharField(_('first name'), max_length=254)
     last_name = models.CharField(_('last name'), max_length=254)
@@ -226,10 +248,10 @@ class Invitation(BaseModel):
 
 class InvitationHistory(BaseModel):
 
-    internal_id = ULIDField(_('invitation_id'), editable = False)
+    internal_id = ULIDField(_('invitation id'), editable = False)
     email = models.EmailField(_('email'), max_length=255, unique=False)
     token = models.TextField()
-    expiry_date = models.DateTimeField(_('expires_at'))
+    expiry_date = models.DateTimeField(_('expires at'))
 
     class Meta:
         verbose_name = 'Invitation History'

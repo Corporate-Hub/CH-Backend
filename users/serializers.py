@@ -1,41 +1,41 @@
-
 from rest_framework import serializers
 from .models import *
 
 
-from .models import Address, PhoneNumber, Country, State, Company
+class AddressSerializer(serializers.Serializer):
+    address_1 = serializers.CharField()
+    address_2 = serializers.CharField()
+    zip_code = serializers.CharField()
+    state = serializers.CharField()
+    country = serializers.CharField()
 
-class AddressSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Address
-        fields = '__all__'
+class PhoneNumberSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    isd_code = serializers.CharField()
+    country = serializers.CharField()
 
-class PhoneNumberSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PhoneNumber
-        fields = '__all__'
+class CountrySerializer(serializers.Serializer):
+    name = serializers.CharField()
+    isd_code = serializers.CharField()
+    alpha2 = serializers.CharField()
+    alpha3 = serializers.CharField()
+    currency = serializers.CharField()
+    currency_symbol = serializers.CharField()
+    currency_code = serializers.CharField()
 
-class CountrySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Country
-        fields = '__all__'
+class StateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    country = CountrySerializer()
 
-class StateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = State
-        fields = '__all__'
+class CompanySerializer(serializers.Serializer):
+    name = serializers.CharField()
+    branch = serializers.CharField()
+    company_address = AddressSerializer()
 
-class CompanySerializer(serializers.ModelSerializer):
-    address = AddressSerializer()
-
-    class Meta:
-        model = Company
-        fields = '__all__'
-
-class RoleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Role
-        fields = '__all__'
+class RoleSerializer(serializers.Serializer):
+    internal_id = serializers.CharField(allow_null=True)
+    name = serializers.CharField()
+    slug = serializers.CharField()
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
